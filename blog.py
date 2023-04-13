@@ -3,7 +3,7 @@ from flask_mysqldb import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
 from passlib.hash import sha256_crypt
 
-#User Registration Form
+#user registration form
 class RegisterForm(Form):
 
     #name must have minimum 4 and maximum 25 characters
@@ -18,6 +18,14 @@ class RegisterForm(Form):
     password = PasswordField("Password", validators=[validators.DataRequired(message="Please set a password."),
                                                      validators.EqualTo(fieldname="confirm", message="Password does not match.")])
     confirm = PasswordField("Confirm Password")
+
+#user login form
+class LoginForm(Form):
+
+    #username field
+    username = StringField("Username")
+    #password field
+    password = PasswordField("Password") 
 
 #define the Flask app
 app = Flask(__name__)
@@ -80,15 +88,74 @@ def register():
         #close the cursor
         cursor.close()
 
+        #flash a success message if registration is successful
         flash("You have successfully registered.", "success")
         
         #go to the url related to the specified function when post is made
-        return redirect(url_for("index"))
+        return redirect(url_for("login"))
     
     else:
         
-        #return register page with form
+        #return register page with form if the request is get
         return render_template("register.html", form = form)
+    
+#login page
+@app.route("/login", methods = ["GET", "POST"])
+def login():
+
+    form = LoginForm(request.form)
+
+    if request.method == "POST":
+        
+        #get data from the dorm
+        username = form.username.data
+        entered_password = form.password.data
+
+        #create a cursor for database operations
+        cursor = mysql.connection.cursor()
+
+        #define the query to select data by username
+        query = "SELECT * FROM users WHERE username = %s"
+
+        #execute query and set it to the result variable
+        result = cursor.execute(query, (username,))
+
+        if result > 0:
+            
+            #if the user exists get its data
+            data = cursor.fetchone()
+
+            #get user's password
+            real_password = data["password"]
+
+            #check whether the password entered by the user and the password in the database are equal
+            if sha256_crypt.verify(entered_password, real_password):
+                
+                #flash a success message if passwords are equal
+                flash("You have successfully logged in.", "success")
+                
+                #return homepage
+                return redirect(url_for("index"))
+            
+            else:
+
+                #flash a danger message if passwords are not equal
+                flash("Wrong password.", "danger")
+
+                #return login page
+                return redirect(url_for("login"))
+
+        else:
+            
+            #flash a danger message if the user not exist
+            flash("User does not exist.", "danger")
+            
+            #return login page
+            return redirect(url_for("login"))
+    else:
+        
+        #return login page with form if the request is get
+        return render_template("login.html", form = form)
 
 if __name__ == "__main__":
 
