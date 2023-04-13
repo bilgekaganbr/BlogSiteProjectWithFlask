@@ -14,9 +14,22 @@
       </ul>
 
       <ul class="navbar-nav ml-auto">
-      <li class="nav-item active">
+        {% if session["logged_in"] %}
+          
+          <li class="nav-item active">
+            <a class="nav-link" href="/dashboard">Dashboard</a>
+          </li>
+          <li class="nav-item active">
+            <a class="nav-link" href="/logout">Logout</a>
+          </li>
+        
+        {% else %}
+
+          <li class="nav-item active">
           <a class="nav-link" href="/login">Login</a>
-        </li>
+          </li>
+
+        {% endif %}
         <li class="nav-item active">
           <a class="nav-link" href="/register">Register</a>
         </li>

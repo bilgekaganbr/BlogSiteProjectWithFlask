@@ -5,14 +5,14 @@
 
     <h3>Register</h3>
     <hr>
-
+    
     <form method="POST">
         {{ render_field(form.name) }}
         {{ render_field(form.username) }}
         {{ render_field(form.email) }}
         {{ render_field(form.password) }}
         {{ render_field(form.confirm) }}
-
         <button type="submit" class="btn btn-primary">Register</button>
     </form>
+
 {% endblock %}

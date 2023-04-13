@@ -2,6 +2,28 @@ from flask import Flask, render_template, flash, redirect, url_for, session, log
 from flask_mysqldb import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
 from passlib.hash import sha256_crypt
+from functools import wraps
+
+#login decorator for pages or processes that require login
+def login_required(f):
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+
+        if "logged_in" in session:
+            
+            #return function if logged in
+            return f(*args, **kwargs)
+        
+        else:
+            
+            #flash a denger message if not logged in
+            flash("Please login first.", "danger")
+
+            #return login page
+            return redirect(url_for("login"))
+    
+    return decorated_function
 
 #user registration form
 class RegisterForm(Form):
@@ -56,6 +78,13 @@ def about():
 
     #return about page as response
     return render_template("about.html")
+
+@app.route("/dashboard")
+#call the login_required decorator
+@login_required
+def dashboard():
+
+    return render_template("dashboard.html")
 
 #register page
 @app.route("/register", methods = ["GET", "POST"])
@@ -133,6 +162,10 @@ def login():
                 
                 #flash a success message if passwords are equal
                 flash("You have successfully logged in.", "success")
+
+                #open a session
+                session["logged_in"] = True
+                session["username"] = username
                 
                 #return homepage
                 return redirect(url_for("index"))
@@ -156,6 +189,16 @@ def login():
         
         #return login page with form if the request is get
         return render_template("login.html", form = form)
+    
+#logout
+@app.route("/logout")
+def logout():
+
+    #clear the session
+    session.clear()
+
+    #return homepage
+    return redirect(url_for("index"))
 
 if __name__ == "__main__":
 
