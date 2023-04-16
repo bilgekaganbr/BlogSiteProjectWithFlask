@@ -49,6 +49,14 @@ class LoginForm(Form):
     #password field
     password = PasswordField("Password") 
 
+#article form
+class ArticleForm(Form):
+
+    #title field
+    title = StringField("Article Title", validators=[validators.Length(min=5, max=100)])
+    #content field
+    content = TextAreaField("Article Content", validators=[validators.Length(min=10)])
+
 #define the Flask app
 app = Flask(__name__)
 
@@ -79,18 +87,65 @@ def about():
     #return about page as response
     return render_template("about.html")
 
+#articles page
+@app.route("/articles")
+def articles():
+
+    #define a cursor for database operations
+    cursor = mysql.connection.cursor()
+
+    #define the query to select data
+    query = "SELECT * FROM articles"
+
+    #execute query and set it to the result variable
+    result = cursor.execute(query)
+
+    if result > 0:
+        
+        #if there are articles, get them as a list in dictionary form
+        articles = cursor.fetchall()
+
+        #return the articles page with articles
+        return render_template("/articles.html", articles = articles)
+
+    else:
+
+        #if there are no articles, return the articles page with an appropriate message
+        return render_template("/articles.html")
+
+#dashboard page
 @app.route("/dashboard")
 #call the login_required decorator
 @login_required
 def dashboard():
 
-    return render_template("dashboard.html")
+    #defina a cursor for database connections
+    cursor = mysql.connection.cursor()
+
+    #define the query for select data by author
+    query = "SELECT * FROM articles WHERE author = %s"
+
+    #execute the query by using the logged in user as author
+    result = cursor.execute(query, (session["username"],))
+
+    if result > 0:
+
+        #if there are articles, get them as a list in dictionary form
+        articles = cursor.fetchall()
+
+        #return the dashboard page with user's articles
+        return render_template("dashboard.html", articles = articles)
+    
+    else:
+        
+        #if there are no articles, return the articles page with an appropriate message
+        return render_template("dashboard.html")
 
 #register page
 @app.route("/register", methods = ["GET", "POST"])
 def register():
 
-    #create object from RegisterForm class and if the request is post, put all the information in 'form' into 'RegisterForm'.
+    #create object from RegisterForm class and request a form suitable for the RegisterForm class
     form = RegisterForm(request.form)
 
     #check if the request is post and validate the form
@@ -132,11 +187,13 @@ def register():
 @app.route("/login", methods = ["GET", "POST"])
 def login():
 
+    #create object from LoginForm class and request a form suitable for the LoginForn class
     form = LoginForm(request.form)
 
+    #check if the request is post 
     if request.method == "POST":
         
-        #get data from the dorm
+        #get data from the form
         username = form.username.data
         entered_password = form.password.data
 
@@ -199,6 +256,46 @@ def logout():
 
     #return homepage
     return redirect(url_for("index"))
+
+#article adding page
+@app.route("/addarticle", methods = ["GET", "POST"])
+def addarticle():
+
+    #create object from ArticleForm class and request a form suitable for the ArticleForm class
+    form = ArticleForm(request.form)
+
+    #check if the request is post and validate the form
+    if request.method == "POST" and form.validate():
+
+        #get data from the form
+        title = form.title.data
+        content = form.content.data
+        
+        #define a cursor for database connection
+        cursor = mysql.connection.cursor()
+
+        #define the query to insert data
+        query = "INSERT INTO articles(title, author, content)  VALUES(%s, %s, %s)"
+
+        #execute the query by using logged in user as author
+        cursor.execute(query, (title, session["username"], content))
+
+        #commit changes
+        mysql.connection.commit()
+
+        #close the cursor
+        cursor.close()
+
+        #flash a success message if the article addition was successful
+        flash("Article has been successfully added.", "success")
+
+        #return the dashboard page
+        return redirect(url_for("dashboard"))
+    
+    else:
+        
+        #if the request is get return the addarticle page with form
+        return render_template("addarticle.html", form = form)
 
 if __name__ == "__main__":
 
