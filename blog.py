@@ -106,12 +106,12 @@ def articles():
         articles = cursor.fetchall()
 
         #return the articles page with articles
-        return render_template("/articles.html", articles = articles)
+        return render_template("articles.html", articles = articles)
 
     else:
 
-        #if there are no articles, return the articles page with an appropriate message
-        return render_template("/articles.html")
+        #if there are no articles, return the articles page with an appropriate error
+        return render_template("articles.html")
 
 #dashboard page
 @app.route("/dashboard")
@@ -138,7 +138,7 @@ def dashboard():
     
     else:
         
-        #if there are no articles, return the articles page with an appropriate message
+        #if there are no articles, return the articles page with an appropriate error
         return render_template("dashboard.html")
 
 #register page
@@ -247,6 +247,32 @@ def login():
         #return login page with form if the request is get
         return render_template("login.html", form = form)
     
+#article detail page
+@app.route("/article/<string:id>")
+def detail(id):
+    
+    #create a cursor for database operations
+    cursor = mysql.connection.cursor()
+
+    #define the query to select data by id
+    query = "SELECT * FROM articles WHERE id = %s"
+
+    #execute query and set it to result variable
+    result = cursor.execute(query, (id,))
+
+    if result > 0:
+        
+        #if the article exists get its data
+        article = cursor.fetchone()
+
+        #return detail page with article
+        return render_template("detail.html", article = article)
+
+    else:
+        
+        #if the article not exist, return detail page with an appropriate warning 
+        return render_template("detail.html")
+    
 #logout
 @app.route("/logout")
 def logout():
@@ -296,6 +322,155 @@ def addarticle():
         
         #if the request is get return the addarticle page with form
         return render_template("addarticle.html", form = form)
+    
+#edit article
+@app.route("/edit/<string:id>", methods = ["GET", "POST"])
+#call the login_required decorator
+@login_required
+def edit(id):
+
+    if request.method == "GET":
+        
+        #create a cursor for database operations
+        cursor = mysql.connection.cursor()
+
+        #define the query to select data by author and id
+        query = "SELECT * FROM articles WHERE author = %s AND id = %s"
+
+        #execute the query and set it to result variable by using logged in user as author
+        result = cursor.execute(query, (session["username"], id))
+
+        if result > 0:
+            
+            #if the article exists, get its data
+            article = cursor.fetchone()
+
+            #create a form object from ArticleForm
+            form = ArticleForm()
+
+            #set current data of the article to the form
+            form.title.data = article["title"]
+            form.content.data = article["content"]
+
+            #if the method is get, return edit page with form that includes current data of the article
+            return render_template("edit.html", form = form)
+
+        else:
+            
+            #flash a danger message if the article not exist or the article does not belong to the logged in user
+            flash("No such article exists or you are not authorised to edit this article.", "danger")
+
+            #return homepage
+            return redirect(url_for("index"))
+
+    else:
+        
+        #create object from ArticleForm class and request a form suitable for the ArticleForm class
+        form = ArticleForm(request.form)
+
+        #get data from the form
+        new_title = form.title.data
+        new_content = form.content.data
+
+        #create a cursor for database operations
+        cursor = mysql.connection.cursor()
+        
+        #define the query to update article by id
+        query2 = "UPDATE articles SET title = %s, content = %s WHERE id = %s"
+
+        #execute the query
+        cursor.execute(query2, (new_title, new_content, id))
+
+        #commit changes
+        mysql.connection.commit()
+
+        #close the cursor
+        cursor.close()
+
+        #flash a success message if update is successful
+        flash("The article has been successfully edited.", "success")
+
+        #return the dashboard page
+        return redirect(url_for("dashboard"))
+    
+#delete article
+@app.route("/delete/<string:id>")
+#call the login_required decorator
+@login_required
+def delete(id):
+
+    #create a cursor for database operations
+    cursor = mysql.connection.cursor()
+
+    #define the query to select data by author and id
+    query = "SELECT * FROM articles WHERE author = %s AND id = %s"
+
+    #execute the query and set it to result variable
+    result = cursor.execute(query, (session["username"], id))
+
+    if result > 0:
+        
+        #define the query2 to delete data by id
+        query2 = "DELETE FROM articles WHERE id = %s"
+
+        #execute the query2
+        cursor.execute(query2, (id,))
+
+        #commit changes
+        mysql.connection.commit()
+
+        #close the cursor
+        cursor.close()
+
+        #return the dashboard page
+        return redirect(url_for("dashboard"))
+
+    else:
+        
+        #flash a danger message if the article not exist or the article does not belong to the logged in user
+        flash("No such article exists or you are not authorised to delete this article.", "danger")
+
+        #return to homepage
+        return redirect(url_for("index"))
+    
+#search
+@app.route("/search", methods = ["GET", "POST"])
+def search():
+
+    if request.method == "GET":
+        
+        #if the method is get, return to homepage
+        return redirect(url_for("index"))
+    
+    else:
+
+        #get input data from form
+        keyword = request.form.get("keyword")
+
+        #create a cursor for database operations
+        cursor = mysql.connection.cursor()
+
+        #define the query to select data by title and keyword(i.e input data from form)
+        query = "SELECT * FROM articles WHERE title LIKE '%" + keyword + "%' "
+
+        #execute the query
+        result = cursor.execute(query)
+
+        if result > 0:
+            
+            #if articles exist, get their data
+            articles = cursor.fetchall()
+
+            #if the method is post, return the articles page with found articles
+            return render_template("articles.html", articles = articles)
+
+        else:
+            
+            #flash a warning message if there are no articles found
+            flash("No suitable articles found.", "warning")
+
+            #return the articles page
+            return redirect(url_for("articles"))
 
 if __name__ == "__main__":
 

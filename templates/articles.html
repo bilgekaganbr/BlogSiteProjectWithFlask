@@ -5,11 +5,16 @@
     <hr>
 
     {% if articles %}
+        <form action="/search" method = "POST">
+            <input type="text" name = "keyword" class="input-sm" maxlength="64" placeholder="Search">
+            <button type="submit" class="btn btn-danger">Search</button>
+        </form>
+        <hr>
 
         <ul class = "list-group">
             {% for article in articles %}
 
-                <li class = "list-group-item">{{ article.title }}</li>
+                <li class = "list-group-item"><a href="article/{{article.id}}">{{ article.title }}</a></li>
             
             {% endfor %}
         </ul>
