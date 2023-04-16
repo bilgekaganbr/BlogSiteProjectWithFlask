@@ -102,7 +102,7 @@ def articles():
 
     if result > 0:
         
-        #if there are articles, get them as a list in dictionary form
+        #if there are articles, get their data
         articles = cursor.fetchall()
 
         #return the articles page with articles
@@ -130,7 +130,7 @@ def dashboard():
 
     if result > 0:
 
-        #if there are articles, get them as a list in dictionary form
+        #if there are articles, get their data
         articles = cursor.fetchall()
 
         #return the dashboard page with user's articles
